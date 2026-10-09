@@ -7,10 +7,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.core.dependencies import SESSION_COOKIE_NAME, utc_now
+from app.core.dependencies import SESSION_COOKIE_NAME, get_current_user, utc_now
 from app.database.session import SessionLocal
 from app.main import app
 from app.models import AuthSession
+from app.routers.listings import list_listings
 from app.services import bookings as booking_service
 from app.seed import seed_database
 
@@ -79,6 +80,26 @@ def test_listing_search_filters_pagination_and_detail(client):
     assert len(detail.json()["images"]) == 3
     assert detail.json()["host"]["name"] == "Ananya Rao"
     assert client.get("/api/listings/999").status_code == 404
+
+
+def test_public_listing_search_works_without_authentication():
+    listing_route = next(route for route in app.routes if getattr(route, "path", None) == "/api/listings")
+    assert all(dependency.call is not get_current_user for dependency in listing_route.dependant.dependencies)
+    with SessionLocal() as db:
+        results = list_listings(
+            guests=None,
+            min_price=None,
+            max_price=None,
+            minimum_rating=None,
+            page=1,
+            limit=12,
+            db=db,
+        )
+    assert results.total == 15
+    assert results.items
+
+    trips_route = next(route for route in app.routes if getattr(route, "path", None) == "/api/bookings/my-trips")
+    assert any(dependency.call is get_current_user for dependency in trips_route.dependant.dependencies)
 
 
 def test_availability_and_invalid_search_dates(client):

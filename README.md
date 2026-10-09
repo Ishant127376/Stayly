@@ -122,6 +122,16 @@ python -m app.seed
 
 **Warning:** this seed command drops and recreates the tables in the database selected by `DATABASE_URL` before inserting sample data. It is destructive and can permanently delete existing users, listings, bookings, and other records. Do not run it against a database containing data you need to keep. The backend test suite uses an isolated temporary SQLite database.
 
+### Add demo listings to an existing deployment safely
+
+To add the sample public listings to an already initialized production database, run the separate additive script explicitly from Render's Shell or a one-off job, with the backend service's configured `DATABASE_URL`:
+
+```sh
+python -m app.seed_demo_listings
+```
+
+Set the Render command working directory to `backend` (the backend service root). This script creates only missing demo host accounts, amenities, listings, images, and listing-amenity links. It skips listings with an existing matching title and city, preserves existing account roles/passwords and listing data, and uses a transaction. It is not run during application startup. After it completes, verify `GET /api/listings?page=1&limit=12&sort=newest` returns a nonzero `total`. **Never use `python -m app.seed` against production**; that command above is destructive.
+
 ## Tests and checks
 
 Backend tests, from `backend/`:
