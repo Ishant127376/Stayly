@@ -289,9 +289,17 @@ def test_signup_login_session_logout_and_legacy_user(client):
 
 def test_session_cookie_secure_setting_is_honored(monkeypatch, client):
     monkeypatch.setattr(settings, "session_cookie_secure", True)
+    monkeypatch.setattr(settings, "session_cookie_samesite", "none")
     response = client.post("/api/auth/signup", json={"name": "Secure Guest", "email": "secure@example.com", "password": "correct horse battery 7"})
     assert response.status_code == 201
-    assert "secure" in response.headers["set-cookie"].lower()
+    cookie = response.headers["set-cookie"].lower()
+    assert "httponly" in cookie
+    assert "secure" in cookie
+    assert "samesite=none" in cookie
+    logout = client.post("/api/auth/logout")
+    deleted_cookie = logout.headers["set-cookie"].lower()
+    assert "secure" in deleted_cookie
+    assert "samesite=none" in deleted_cookie
 
 
 def test_session_authentication_and_origin_protection(client):

@@ -78,6 +78,7 @@ Backend settings are read from `backend/.env` or the process environment. `backe
 | `FRONTEND_ORIGIN` | Exact allowed browser origin for CORS and state-changing API requests | `http://localhost:3000` |
 | `SESSION_TTL_DAYS` | Session lifetime | `7` |
 | `SESSION_COOKIE_SECURE` | Mark the session cookie Secure; enable for HTTPS | `false` |
+| `SESSION_COOKIE_SAMESITE` | Cookie cross-site policy (`lax`, `strict`, or `none`; `none` requires Secure) | `lax` |
 | `FRONTEND_BASE_URL` | Absolute frontend URL used in confirmation email links | `http://localhost:3000` |
 | `SMTP_HOST` | SMTP server host; unset means email is skipped with a warning | unset |
 | `SMTP_PORT` | SMTP server port | `587` |
@@ -138,11 +139,24 @@ npm run build
 
 ## Deployment considerations
 
-- Serve the frontend and API over HTTPS and set `SESSION_COOKIE_SECURE=true`.
-- Set `FRONTEND_ORIGIN` to the exact deployed frontend origin and `FRONTEND_BASE_URL` to its absolute URL. The backend allows credentials only from the configured origin.
+- **Vercel frontend:** set `NEXT_PUBLIC_API_URL` to the Render API origin with `/api` appended (for example, `https://<render-service>.onrender.com/api`) in Vercel's environment settings **before the production build**. Next.js embeds this public value during build; changing it requires a new build. The frontend appends endpoint paths such as `/listings` to this base.
+- **Render API:** configure these backend environment variables in Render. Use placeholders below as a guide; enter actual credentials only in the deployment provider's secret settings:
+
+  ```text
+  DATABASE_URL=<Neon PostgreSQL connection URI>
+  FRONTEND_ORIGIN=https://<your-vercel-deployment>.vercel.app
+  FRONTEND_BASE_URL=https://<your-vercel-deployment>.vercel.app
+  SESSION_COOKIE_SECURE=true
+  SESSION_COOKIE_SAMESITE=none
+  SESSION_TTL_DAYS=7
+  ```
+
+  Use the exact Vercel origin without a trailing slash for both frontend variables. For Neon, use its PostgreSQL connection URI with SSL enabled as supplied by Neon. The backend uses psycopg 3 for standard `postgresql://` URLs.
+- The API's CORS credentials policy and exact-origin checks for state-changing requests use `FRONTEND_ORIGIN`. Keep it restricted to the deployed frontend origin. `SameSite=None` is required for the Vercel and Render cross-site cookie flow and is accepted only when `SESSION_COOKIE_SECURE=true`; local defaults remain `Lax` and insecure HTTP.
+- The backend creates missing tables additively at startup; it does not migrate or reset existing tables. Do not run the destructive seed/reset script against Neon or any database containing data you need to keep. SQLite remains the local and test default.
+- For production, use a managed database with backups and persistent storage appropriate to expected write concurrency.
 - Keep SMTP credentials and other backend secrets in the deployment platform's secret manager, never in Git or frontend environment variables.
-- The session cookie uses SameSite=Lax. Prefer deploying the frontend and API on the same site; a cross-site deployment may require a deliberate cookie policy change.
-- SQLite is suitable for local development and this assignment. For deployment, use persistent storage, backups, and a managed database appropriate to the expected write concurrency.
+- Keep SMTP credentials in Render's backend environment and set `FRONTEND_BASE_URL` to the deployed Vercel origin so confirmation links point to Trips.
 - Configure SMTP with a verified sender and provider-specific TLS/authentication settings. Email delivery is best-effort and is not queued for automatic retry.
 - The checkout does not integrate a payment provider. Do not present it as real payment processing.
 

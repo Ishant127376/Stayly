@@ -28,7 +28,7 @@ def set_session_cookie(response: Response, raw_token: str) -> None:
         max_age=settings.session_ttl_days * 24 * 60 * 60,
         httponly=True,
         secure=settings.session_cookie_secure,
-        samesite="lax",
+        samesite=settings.session_cookie_samesite,
         path="/",
     )
 
@@ -107,7 +107,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
         path="/",
         httponly=True,
         secure=settings.session_cookie_secure,
-        samesite="lax",
+        samesite=settings.session_cookie_samesite,
     )
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
