@@ -69,6 +69,8 @@ export type ListingPage = {
   pages: number;
 };
 
+export type Destination = { city: string; country: string };
+
 export type SearchFilters = {
   location: string;
   check_in: string;

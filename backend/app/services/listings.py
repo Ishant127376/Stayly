@@ -24,6 +24,16 @@ def get_listing(db: Session, listing_id: int) -> Listing | None:
     return db.scalar(statement)
 
 
+def list_destinations(db: Session, query: str | None = None) -> list[tuple[str, str]]:
+    statement = select(Listing.city, Listing.country).distinct()
+    if query and query.strip():
+        pattern = f"%{query.strip()}%"
+        statement = statement.where(
+            or_(Listing.city.ilike(pattern), Listing.country.ilike(pattern))
+        )
+    return list(db.execute(statement.order_by(Listing.city, Listing.country)).tuples().all())
+
+
 def search_listings(
     db: Session,
     *,
@@ -43,8 +53,13 @@ def search_listings(
     statement = select(Listing).options(*listing_options())
     filters = []
     if location:
-        pattern = f"%{location.strip()}%"
-        filters.append(or_(Listing.location.ilike(pattern), Listing.city.ilike(pattern), Listing.country.ilike(pattern)))
+        normalized_location = location.strip().casefold()
+        pattern = f"%{normalized_location}%"
+        filters.append(or_(
+            func.lower(Listing.location).like(pattern),
+            func.lower(Listing.city).like(pattern),
+            func.lower(Listing.country).like(pattern),
+        ))
     if guests is not None:
         filters.append(Listing.max_guests >= guests)
     if min_price is not None:

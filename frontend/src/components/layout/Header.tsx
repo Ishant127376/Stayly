@@ -23,6 +23,7 @@ export function Header({ filters, onSearch }: HeaderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [authError, setAuthError] = useState("");
+  const searchKey = [filters.location, filters.check_in, filters.check_out, filters.guests ?? ""].join("|");
 
   useEffect(() => {
     getCurrentUser().then(setUser).catch(() => undefined);
@@ -53,14 +54,14 @@ export function Header({ filters, onSearch }: HeaderProps) {
           <span className="brand-mark">S</span>
           <span>stayly</span>
         </Link>
-        <div className="header-search"><SearchBar filters={filters} onSearch={onSearch} compact /></div>
+        <div className="header-search"><SearchBar key={searchKey} filters={filters} onSearch={onSearch} compact /></div>
         <nav className="header-actions" aria-label="Primary navigation">
           <HeaderLinks user={user} loginHref={loginHref} />
           <button className="icon-button" type="button" aria-label="Choose language"><Globe2 size={19} /></button>
           {user ? <div className="account-controls"><span className="account-name">{user.name}</span><button className="signout-button" type="button" onClick={handleLogout} disabled={signingOut}>{signingOut ? "Signing out…" : "Log out"}</button></div> : <div className="account-controls account-controls--signed-out"><Link href={loginHref}>Log in</Link><Link className="signup-link" href={`/signup?next=${encodeURIComponent(pathname || "/")}`}>Sign up</Link></div>}
         </nav>
       </div>
-      <div className="mobile-search"><SearchBar filters={filters} onSearch={onSearch} /></div>
+      <div className="mobile-search"><SearchBar key={searchKey} filters={filters} onSearch={onSearch} /></div>
       <nav className="mobile-links" aria-label="Mobile navigation">
         <HeaderLinks user={user} loginHref={loginHref} />
         {user ? <button className="signout-button" type="button" onClick={handleLogout} disabled={signingOut}>{signingOut ? "Signing out…" : "Log out"}</button> : <Link className="signup-link" href={`/signup?next=${encodeURIComponent(pathname || "/")}`}>Sign up</Link>}

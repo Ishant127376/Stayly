@@ -1,5 +1,5 @@
 import type { LoginPayload, SignupPayload } from "@/types/auth";
-import type { Availability, Booking, BookingDraft, HostBooking, Listing, ListingPage, ListingPayload, Review, ReviewPayload, SearchFilters, User, WishlistItem } from "@/types/listing";
+import type { Availability, Booking, BookingDraft, Destination, HostBooking, Listing, ListingPage, ListingPayload, Review, ReviewPayload, SearchFilters, User, WishlistItem } from "@/types/listing";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -111,6 +111,13 @@ export async function getReviews(listingId: number): Promise<Review[]> {
 
 export async function createReview(listingId: number, payload: ReviewPayload): Promise<Review> {
   return request<Review>(`/listings/${listingId}/reviews`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }, true);
+}
+
+export async function getDestinations(query: string): Promise<Destination[]> {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  const suffix = params.size ? `?${params.toString()}` : "";
+  return request<Destination[]>(`/listings/destinations${suffix}`);
 }
 
 export async function getWishlist(redirectOnUnauthorized = false): Promise<WishlistItem[]> {

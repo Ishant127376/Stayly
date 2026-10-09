@@ -92,6 +92,11 @@ class ListingPage(BaseModel):
     pages: int
 
 
+class DestinationRead(BaseModel):
+    city: str
+    country: str
+
+
 class BlockedRange(BaseModel):
     check_in: date
     check_out: date

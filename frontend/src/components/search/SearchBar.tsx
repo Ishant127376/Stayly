@@ -1,9 +1,10 @@
 "use client";
 
 import { CalendarDays, MapPin, Search, Users, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { SearchFilters } from "@/types/listing";
+import { getDestinations } from "@/lib/api";
+import type { Destination, SearchFilters } from "@/types/listing";
 
 type SearchBarProps = {
   filters: SearchFilters;
@@ -19,6 +20,33 @@ export function SearchBar({ filters, onSearch, compact = false }: SearchBarProps
   const [checkIn, setCheckIn] = useState(filters.check_in);
   const [checkOut, setCheckOut] = useState(filters.check_out);
   const [guests, setGuests] = useState(filters.guests ?? 0);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
+
+  useEffect(() => {
+    if (activeField !== "where") return;
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setDestinationsLoading(true);
+      getDestinations(location)
+        .then((results) => {
+          if (active) {
+            setDestinations(results);
+            setDestinationsLoading(false);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setDestinations([]);
+            setDestinationsLoading(false);
+          }
+        });
+    }, 120);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [activeField, location]);
 
   function submitSearch() {
     if ((checkIn && !checkOut) || (!checkIn && checkOut)) return;
@@ -40,7 +68,13 @@ export function SearchBar({ filters, onSearch, compact = false }: SearchBarProps
   return (
     <div className={`search-bar ${compact ? "search-bar--compact" : ""}`}>
       <div className="search-segment search-segment--where">
-        <button className="search-segment__button" type="button" onClick={() => setActiveField(activeField === "where" ? null : "where")}>
+        <button className="search-segment__button" type="button" onClick={() => {
+          if (activeField !== "where") {
+            setDestinations([]);
+            setDestinationsLoading(true);
+          }
+          setActiveField(activeField === "where" ? null : "where");
+        }}>
           <MapPin size={17} strokeWidth={2.2} />
           <span><strong>Where</strong><small>{location || "Search destinations"}</small></span>
         </button>
@@ -49,16 +83,23 @@ export function SearchBar({ filters, onSearch, compact = false }: SearchBarProps
             <p className="popover-kicker">Where do you want to go?</p>
             <label className="input-with-icon">
               <MapPin size={17} />
-              <input autoFocus value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Goa, Paris, Bali..." />
+              <input autoFocus value={location} onChange={(event) => {
+                setDestinations([]);
+                setDestinationsLoading(true);
+                setLocation(event.target.value);
+              }} placeholder="Search destinations" />
             </label>
-            <div className="suggestion-row" onClick={() => setLocation("Goa")} role="button" tabIndex={0}>
-              <span className="suggestion-icon"><MapPin size={16} /></span>
-              <span><strong>Goa</strong><small>India · beach escapes</small></span>
-            </div>
-            <div className="suggestion-row" onClick={() => setLocation("Paris")} role="button" tabIndex={0}>
-              <span className="suggestion-icon"><MapPin size={16} /></span>
-              <span><strong>Paris</strong><small>France · city stays</small></span>
-            </div>
+            {destinationsLoading ? <p className="suggestion-empty" role="status">Finding destinations…</p> : destinations.length ? destinations.map((destination) => (
+              <button
+                className="suggestion-row"
+                key={`${destination.city}-${destination.country}`}
+                onClick={() => setLocation(destination.city)}
+                type="button"
+              >
+                <span className="suggestion-icon"><MapPin size={16} /></span>
+                <span><strong>{destination.city}</strong><small>{destination.country}</small></span>
+              </button>
+            )) : <p className="suggestion-empty" role="status">No matching destinations</p>}
           </div>
         )}
       </div>

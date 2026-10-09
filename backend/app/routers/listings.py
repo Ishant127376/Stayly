@@ -9,7 +9,7 @@ from app.core.dependencies import get_current_user, require_host
 from app.database.session import get_db
 from app.models import Booking, Listing, Review, User
 from app.schemas.booking import BookingHostRead
-from app.schemas.listing import AvailabilityRead, BlockedRange, ListingCreate, ListingPage, ListingRead, ListingUpdate
+from app.schemas.listing import AvailabilityRead, BlockedRange, DestinationRead, ListingCreate, ListingPage, ListingRead, ListingUpdate
 from app.schemas.review import ReviewCreate, ReviewWithUser
 from app.services import listings as listing_service
 
@@ -21,6 +21,17 @@ def validate_search_dates(check_in: date | None, check_out: date | None) -> None
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="check_in and check_out must be provided together.")
     if check_in and check_out and check_out <= check_in:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="check_out must be after check_in.")
+
+
+@router.get("/destinations", response_model=list[DestinationRead])
+def listing_destinations(
+    q: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[DestinationRead]:
+    return [
+        DestinationRead(city=city, country=country)
+        for city, country in listing_service.list_destinations(db, q)
+    ]
 
 
 @router.get("", response_model=ListingPage)
